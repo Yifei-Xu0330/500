@@ -1,108 +1,155 @@
-# app.py (简化版)
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import math
 
 app = Flask(__name__)
-EARTH_RADIUS = 6371000  # 地球平均半径（米）
 
-def dms_to_decimal(degrees, minutes, seconds, direction):
-    """度分秒转十进制度"""
-    decimal = float(degrees) + float(minutes)/60 + float(seconds)/3600
-    return -decimal if direction in ['S', 'W'] else decimal
 
-def calculate_distance(point1, point2):
-    """计算两点间距离（考虑高度）"""
-    lat1, lon1, alt1 = point1
-    lat2, lon2, alt2 = point2
+EARTH_RADIUS = 6371000
+
+def dms_to_degrees(d, m, s):
     
-    # 转换为弧度
-    lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
-    lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
+    return d + m/60 + s/3600
+
+def degrees_to_radians(deg):
     
-    # 球面距离（Haversine公式）
-    dlat = lat2_rad - lat1_rad
-    dlon = lon2_rad - lon1_rad
-    a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon/2)**2
-    surface_distance = EARTH_RADIUS * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return deg * math.pi / 180
+
+def dms_to_radians(d, m, s):
     
-    # 空间直线距离（考虑高度）
-    r1 = EARTH_RADIUS + alt1
-    r2 = EARTH_RADIUS + alt2
+    return degrees_to_radians(dms_to_degrees(d, m, s))
+
+def calculate_distance(lat1, lon1, h1, lat2, lon2, h2, mode):
+    
+    if mode == 'dms':
+        
+        lat1_rad = dms_to_radians(lat1[0], lat1[1], lat1[2])
+        lon1_rad = dms_to_radians(lon1[0], lon1[1], lon1[2])
+        lat2_rad = dms_to_radians(lat2[0], lat2[1], lat2[2])
+        lon2_rad = dms_to_radians(lon2[0], lon2[1], lon2[2])
+    else:  
+        lat1_rad = lat1
+        lon1_rad = lon1
+        lat2_rad = lat2
+        lon2_rad = lon2
+    
+    
+    r1 = EARTH_RADIUS + h1
+    r2 = EARTH_RADIUS + h2
+    
     x1 = r1 * math.cos(lat1_rad) * math.cos(lon1_rad)
     y1 = r1 * math.cos(lat1_rad) * math.sin(lon1_rad)
     z1 = r1 * math.sin(lat1_rad)
+    
     x2 = r2 * math.cos(lat2_rad) * math.cos(lon2_rad)
     y2 = r2 * math.cos(lat2_rad) * math.sin(lon2_rad)
     z2 = r2 * math.sin(lat2_rad)
-    straight_distance = math.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
     
-    return surface_distance, straight_distance
+    
+    distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+    
+    return distance
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    results = None
+    distance = None
     if request.method == 'POST':
+        mode = request.form['mode']
+        
         try:
-            # 获取输入格式
-            input_format = request.form.get('input_format', 'dms')
+            if mode == 'dms':
+                
+                lat1 = [float(request.form['lat1_d']), float(request.form['lat1_m']), float(request.form['lat1_s'])]
+                lon1 = [float(request.form['lon1_d']), float(request.form['lon1_m']), float(request.form['lon1_s'])]
+                h1 = float(request.form['h1'])
+                
+                lat2 = [float(request.form['lat2_d']), float(request.form['lat2_m']), float(request.form['lat2_s'])]
+                lon2 = [float(request.form['lon2_d']), float(request.form['lon2_m']), float(request.form['lon2_s'])]
+                h2 = float(request.form['h2'])
+                
+                
+                if not (-90 <= lat1[0] < 90 and -90 <= lat2[0] < 90):
+                    raise ValueError("纬度必须在-90到90度之间")
+                
+                
+                if not (-180 <= lon1[0] < 180 and -180 <= lon2[0] < 180):
+                    raise ValueError("经度必须在-180到180度之间")
+                
+            else:  
+                lat1 = float(request.form['lat1_rad'])
+                lon1 = float(request.form['lon1_rad'])
+                h1 = float(request.form['h1'])
+                
+                lat2 = float(request.form['lat2_rad'])
+                lon2 = float(request.form['lon2_rad'])
+                h2 = float(request.form['h2'])
+                
+                
+                if not (-math.pi/2 <= lat1 <= math.pi/2 and -math.pi/2 <= lat2 <= math.pi/2):
+                    raise ValueError("纬度必须在-π/2到π/2之间")
+                
+                
+                if not (-math.pi <= lon1 <= math.pi and -math.pi <= lon2 <= math.pi):
+                    raise ValueError("经度必须在-π到π之间")
             
-            # 处理点1坐标
-            if input_format == 'dms':
-                lat1 = dms_to_decimal(
-                    request.form.get('lat1_deg', 0),
-                    request.form.get('lat1_min', 0),
-                    request.form.get('lat1_sec', 0),
-                    request.form.get('lat1_dir', 'N')
-                )
-                lon1 = dms_to_decimal(
-                    request.form.get('lon1_deg', 0),
-                    request.form.get('lon1_min', 0),
-                    request.form.get('lon1_sec', 0),
-                    request.form.get('lon1_dir', 'E')
-                )
-            else:
-                lat1 = math.degrees(float(request.form.get('lat1_rad', 0)))
-                lon1 = math.degrees(float(request.form.get('lon1_rad', 0)))
-            alt1 = float(request.form.get('alt1', 0))
             
-            # 处理点2坐标（同上）
-            if input_format == 'dms':
-                lat2 = dms_to_decimal(
-                    request.form.get('lat2_deg', 0),
-                    request.form.get('lat2_min', 0),
-                    request.form.get('lat2_sec', 0),
-                    request.form.get('lat2_dir', 'N')
-                )
-                lon2 = dms_to_decimal(
-                    request.form.get('lon2_deg', 0),
-                    request.form.get('lon2_min', 0),
-                    request.form.get('lon2_sec', 0),
-                    request.form.get('lon2_dir', 'E')
-                )
-            else:
-                lat2 = math.degrees(float(request.form.get('lat2_rad', 0)))
-                lon2 = math.degrees(float(request.form.get('lon2_rad', 0)))
-            alt2 = float(request.form.get('alt2', 0))
+            distance = calculate_distance(lat1, lon1, h1, lat2, lon2, h2, mode)
             
-            # 计算距离
-            surface_dist, straight_dist = calculate_distance(
-                (lat1, lon1, alt1),
-                (lat2, lon2, alt2)
-            )
-            
-            # 准备结果
-            results = {
-                'point1': (lat1, lon1, alt1),
-                'point2': (lat2, lon2, alt2),
-                'surface_dist': surface_dist,
-                'straight_dist': straight_dist
-            }
+        except ValueError as e:
+            distance = f"输入错误: {str(e)}"
         except Exception as e:
-            results = {'error': f"计算错误: {str(e)}"}
+            distance = f"计算错误: {str(e)}"
     
-    return render_template('index.html', results=results, input_format=input_format)
+    return render_template('index.html', distance=distance)
+
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    try:
+        data = request.get_json()
+        mode = data['mode']
+        
+        if mode == 'dms':
+            
+            lat1 = [float(data['lat1_d']), float(data['lat1_m']), float(data['lat1_s'])]
+            lon1 = [float(data['lon1_d']), float(data['lon1_m']), float(data['lon1_s'])]
+            h1 = float(data['h1'])
+            
+            lat2 = [float(data['lat2_d']), float(data['lat2_m']), float(data['lat2_s'])]
+            lon2 = [float(data['lon2_d']), float(data['lon2_m']), float(data['lon2_s'])]
+            h2 = float(data['h2'])
+            
+            
+            if not (-90 <= lat1[0] < 90 and -90 <= lat2[0] < 90):
+                return jsonify({'error': "纬度必须在-90到90度之间"}), 400
+            
+            
+            if not (-180 <= lon1[0] < 180 and -180 <= lon2[0] < 180):
+                return jsonify({'error': "经度必须在-180到180度之间"}), 400
+            
+        else:  
+            lat1 = float(data['lat1_rad'])
+            lon1 = float(data['lon1_rad'])
+            h1 = float(data['h1'])
+            
+            lat2 = float(data['lat2_rad'])
+            lon2 = float(data['lon2_rad'])
+            h2 = float(data['h2'])
+            
+            
+            if not (-math.pi/2 <= lat1 <= math.pi/2 and -math.pi/2 <= lat2 <= math.pi/2):
+                return jsonify({'error': "纬度必须在-π/2到π/2之间"}), 400
+            
+            if not (-math.pi <= lon1 <= math.pi and -math.pi <= lon2 <= math.pi):
+                return jsonify({'error': "经度必须在-π到π之间"}), 400
+        
+        distance = calculate_distance(lat1, lon1, h1, lat2, lon2, h2, mode)
+        
+        return jsonify({
+            'distance': distance,
+            'formatted_distance': f"{distance:,.2f} 米"
+        })
+    
+    except Exception as e:
+        return jsonify({'error': f"计算错误: {str(e)}"}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True)

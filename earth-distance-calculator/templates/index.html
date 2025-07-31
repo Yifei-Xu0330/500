@@ -1,115 +1,491 @@
-<!-- templates/index.html (简化版) -->
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>地球距离计算器</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地球两点直线距离计算器</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: inline-block; width: 150px; }
-        input, select { padding: 5px; width: 80px; }
-        .dms-input { display: none; }
-        .results { margin-top: 30px; padding: 15px; background: #f0f8ff; border-radius: 5px; }
-        .error { color: red; }
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --success-color: #2ecc71;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: var(--light-color);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            margin-top: 20px;
+            box-shadow: var(--box-shadow);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .description {
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto 20px;
+            line-height: 1.6;
+            color: #ddd;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        
+        .tab-btn {
+            padding: 12px 30px;
+            background-color: var(--dark-color);
+            border: none;
+            color: var(--light-color);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+        
+        .tab-btn.active {
+            background-color: var(--secondary-color);
+            font-weight: bold;
+        }
+        
+        .tab-btn:first-child {
+            border-radius: var(--border-radius) 0 0 0;
+        }
+        
+        .tab-btn:last-child {
+            border-radius: 0 var(--border-radius) 0 0;
+        }
+        
+        .input-section {
+            display: none;
+            padding: 25px;
+            background-color: rgba(44, 62, 80, 0.7);
+            border-radius: 0 var(--border-radius) var(--border-radius) var(--border-radius);
+            margin-bottom: 25px;
+        }
+        
+        .input-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .point-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .point-card {
+            flex: 1;
+            background-color: rgba(52, 73, 94, 0.8);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        
+        .point-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            color: var(--secondary-color);
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .dms-inputs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .dms-inputs input {
+            flex: 1;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #555;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 1.1rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .result-container {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .result-container.active {
+            display: block;
+        }
+        
+        .result-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--light-color);
+        }
+        
+        .distance-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--success-color);
+            margin: 10px 0;
+        }
+        
+        .formula {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: var(--border-radius);
+            font-style: italic;
+        }
+        
+        .formula-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--secondary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .point-container {
+                flex-direction: column;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab-btn {
+                border-radius: 0;
+            }
+            
+            .tab-btn:first-child {
+                border-radius: var(--border-radius) var(--border-radius) 0 0;
+            }
+            
+            .tab-btn:last-child {
+                border-radius: 0 0 var(--border-radius) var(--border-radius);
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>地球坐标距离计算器</h1>
+    <header>
+        <h1>地球两点直线距离计算器</h1>
+        <p class="description">
+            计算视为完美球体的地球上两点的直线距离（不考虑地下）。提供度分秒和弧度两种输入方式。
+        </p>
+    </header>
     
-    <form method="POST">
-        <div>
-            <label>输入格式:</label>
-            <input type="radio" name="input_format" value="dms" checked onchange="toggleFormat()"> 度分秒
-            <input type="radio" name="input_format" value="radians" onchange="toggleFormat()"> 弧度
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="dms">度分秒输入</button>
+            <button class="tab-btn" data-tab="rad">弧度输入</button>
         </div>
         
-        <h2>点1坐标</h2>
-        <div id="dms1" class="dms-input">
-            <div class="form-group">
-                <label>纬度:</label>
-                <input type="number" name="lat1_deg" placeholder="度" value="0">
-                <input type="number" name="lat1_min" placeholder="分" value="0">
-                <input type="number" name="lat1_sec" placeholder="秒" value="0" step="0.01">
-                <select name="lat1_dir">
-                    <option value="N">北纬</option>
-                    <option value="S">南纬</option>
-                </select>
+        <!-- 度分秒输入部分 -->
+        <div id="dms-input" class="input-section active">
+            <form id="dms-form">
+                <div class="point-container">
+                    <div class="point-card">
+                        <div class="point-title">点 A</div>
+                        <div class="input-group">
+                            <label>纬度 (度分秒)</label>
+                            <div class="dms-inputs">
+                                <input type="number" id="lat1_d" name="lat1_d" placeholder="度" step="any" required>
+                                <input type="number" id="lat1_m" name="lat1_m" placeholder="分" step="any" required>
+                                <input type="number" id="lat1_s" name="lat1_s" placeholder="秒" step="any" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>经度 (度分秒)</label>
+                            <div class="dms-inputs">
+                                <input type="number" id="lon1_d" name="lon1_d" placeholder="度" step="any" required>
+                                <input type="number" id="lon1_m" name="lon1_m" placeholder="分" step="any" required>
+                                <input type="number" id="lon1_s" name="lon1_s" placeholder="秒" step="any" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>高度 (米)</label>
+                            <input type="number" id="h1" name="h1" placeholder="高度" step="any" required>
+                        </div>
+                    </div>
+                    
+                    <div class="point-card">
+                        <div class="point-title">点 B</div>
+                        <div class="input-group">
+                            <label>纬度 (度分秒)</label>
+                            <div class="dms-inputs">
+                                <input type="number" id="lat2_d" name="lat2_d" placeholder="度" step="any" required>
+                                <input type="number" id="lat2_m" name="lat2_m" placeholder="分" step="any" required>
+                                <input type="number" id="lat2_s" name="lat2_s" placeholder="秒" step="any" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>经度 (度分秒)</label>
+                            <div class="dms-inputs">
+                                <input type="number" id="lon2_d" name="lon2_d" placeholder="度" step="any" required>
+                                <input type="number" id="lon2_m" name="lon2_m" placeholder="分" step="any" required>
+                                <input type="number" id="lon2_s" name="lon2_s" placeholder="秒" step="any" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>高度 (米)</label>
+                            <input type="number" id="h2" name="h2" placeholder="高度" step="any" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-container">
+                    <button type="submit">计算距离</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 弧度输入部分 -->
+        <div id="rad-input" class="input-section">
+            <form id="rad-form">
+                <div class="point-container">
+                    <div class="point-card">
+                        <div class="point-title">点 A</div>
+                        <div class="input-group">
+                            <label>纬度 (弧度)</label>
+                            <input type="number" id="lat1_rad" name="lat1_rad" placeholder="纬度弧度" step="any" required>
+                        </div>
+                        <div class="input-group">
+                            <label>经度 (弧度)</label>
+                            <input type="number" id="lon1_rad" name="lon1_rad" placeholder="经度弧度" step="any" required>
+                        </div>
+                        <div class="input-group">
+                            <label>高度 (米)</label>
+                            <input type="number" id="h1_rad" name="h1" placeholder="高度" step="any" required>
+                        </div>
+                    </div>
+                    
+                    <div class="point-card">
+                        <div class="point-title">点 B</div>
+                        <div class="input-group">
+                            <label>纬度 (弧度)</label>
+                            <input type="number" id="lat2_rad" name="lat2_rad" placeholder="纬度弧度" step="any" required>
+                        </div>
+                        <div class="input-group">
+                            <label>经度 (弧度)</label>
+                            <input type="number" id="lon2_rad" name="lon2_rad" placeholder="经度弧度" step="any" required>
+                        </div>
+                        <div class="input-group">
+                            <label>高度 (米)</label>
+                            <input type="number" id="h2_rad" name="h2" placeholder="高度" step="any" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-container">
+                    <button type="submit">计算距离</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 结果展示区域 -->
+        <div id="result-container" class="result-container">
+            <div class="result-title">两点间的直线距离</div>
+            <div class="distance-value" id="distance-value">0.00 米</div>
+            <div class="formula">
+                <div class="formula-title">计算公式：</div>
+                <div>笛卡尔坐标系距离公式：</div>
+                <div>d = √[(x₂ - x₁)² + (y₂ - y₁)² + (z₂ - z₁)²]</div>
+                <div>其中 x = (R + h) × cos(lat) × cos(lon)</div>
+                <div>y = (R + h) × cos(lat) × sin(lon)</div>
+                <div>z = (R + h) × sin(lat)</div>
+                <div>R = 地球半径 ≈ 6,371,000 米</div>
             </div>
-            <div class="form-group">
-                <label>经度:</label>
-                <input type="number" name="lon1_deg" placeholder="度" value="0">
-                <input type="number" name="lon1_min" placeholder="分" value="0">
-                <input type="number" name="lon1_sec" placeholder="秒" value="0" step="0.01">
-                <select name="lon1_dir">
-                    <option value="E">东经</option>
-                    <option value="W">西经</option>
-                </select>
-            </div>
         </div>
-        
-        <div id="rad1" class="rad-input" style="display:none">
-            <div class="form-group">
-                <label>纬度(弧度):</label>
-                <input type="number" name="lat1_rad" value="0" step="0.0001">
-            </div>
-            <div class="form-group">
-                <label>经度(弧度):</label>
-                <input type="number" name="lon1_rad" value="0" step="0.0001">
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>高度(米):</label>
-            <input type="number" name="alt1" value="0" step="1">
-        </div>
-        
-        <!-- 点2坐标表单（类似点1） -->
-        <h2>点2坐标</h2>
-        <div id="dms2" class="dms-input">
-            <!-- 类似点1的度分秒输入 -->
-        </div>
-        
-        <div id="rad2" class="rad-input" style="display:none">
-            <!-- 类似点1的弧度输入 -->
-        </div>
-        
-        <div class="form-group">
-            <label>高度(米):</label>
-            <input type="number" name="alt2" value="0" step="1">
-        </div>
-        
-        <button type="submit">计算距离</button>
-    </form>
-    
-    {% if results %}
-    <div class="results">
-        {% if results.error %}
-            <p class="error">{{ results.error }}</p>
-        {% else %}
-            <h3>计算结果</h3>
-            <p>地球表面距离: {{ "%.2f"|format(results.surface_dist) }} 米 ({{ "%.2f"|format(results.surface_dist/1000) }} 公里)</p>
-            <p>空间直线距离: {{ "%.2f"|format(results.straight_dist) }} 米 ({{ "%.2f"|format(results.straight_dist/1000) }} 公里)</p>
-            
-            <h3>坐标信息</h3>
-            <p>点1: 纬度 {{ "%.6f"|format(results.point1[0]) }}, 经度 {{ "%.6f"|format(results.point1[1]) }}, 高度 {{ results.point1[2] }}米</p>
-            <p>点2: 纬度 {{ "%.6f"|format(results.point2[0]) }}, 经度 {{ "%.6f"|format(results.point2[1]) }}, 高度 {{ results.point2[2] }}米</p>
-        {% endif %}
     </div>
-    {% endif %}
     
     <script>
-        function toggleFormat() {
-            const format = document.querySelector('input[name="input_format"]:checked').value;
-            document.querySelectorAll('.dms-input').forEach(el => {
-                el.style.display = format === 'dms' ? 'block' : 'none';
+        // 选项卡切换功能
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // 更新活动选项卡
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // 显示对应的输入部分
+                const tab = this.getAttribute('data-tab');
+                document.querySelectorAll('.input-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                if (tab === 'dms') {
+                    document.getElementById('dms-input').classList.add('active');
+                } else {
+                    document.getElementById('rad-input').classList.add('active');
+                }
+                
+                // 隐藏结果区域
+                document.getElementById('result-container').classList.remove('active');
             });
-            document.querySelectorAll('.rad-input').forEach(el => {
-                el.style.display = format === 'radians' ? 'block' : 'none';
+        });
+        
+        // 度分秒表单提交
+        document.getElementById('dms-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            calculateDistance('dms');
+        });
+        
+        // 弧度表单提交
+        document.getElementById('rad-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            calculateDistance('rad');
+        });
+        
+        // 计算距离
+        function calculateDistance(mode) {
+            const formData = {};
+            
+            if (mode === 'dms') {
+                formData.mode = 'dms';
+                formData.lat1_d = document.getElementById('lat1_d').value;
+                formData.lat1_m = document.getElementById('lat1_m').value;
+                formData.lat1_s = document.getElementById('lat1_s').value;
+                formData.lon1_d = document.getElementById('lon1_d').value;
+                formData.lon1_m = document.getElementById('lon1_m').value;
+                formData.lon1_s = document.getElementById('lon1_s').value;
+                formData.h1 = document.getElementById('h1').value;
+                
+                formData.lat2_d = document.getElementById('lat2_d').value;
+                formData.lat2_m = document.getElementById('lat2_m').value;
+                formData.lat2_s = document.getElementById('lat2_s').value;
+                formData.lon2_d = document.getElementById('lon2_d').value;
+                formData.lon2_m = document.getElementById('lon2_m').value;
+                formData.lon2_s = document.getElementById('lon2_s').value;
+                formData.h2 = document.getElementById('h2').value;
+            } else {
+                formData.mode = 'rad';
+                formData.lat1_rad = document.getElementById('lat1_rad').value;
+                formData.lon1_rad = document.getElementById('lon1_rad').value;
+                formData.h1 = document.getElementById('h1_rad').value;
+                
+                formData.lat2_rad = document.getElementById('lat2_rad').value;
+                formData.lon2_rad = document.getElementById('lon2_rad').value;
+                formData.h2 = document.getElementById('h2_rad').value;
+            }
+            
+            // 发送请求到后端
+            fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('distance-value').textContent = data.error;
+                    document.getElementById('result-container').classList.add('active');
+                } else {
+                    document.getElementById('distance-value').textContent = data.formatted_distance;
+                    document.getElementById('result-container').classList.add('active');
+                }
+            })
+            .catch(error => {
+                document.getElementById('distance-value').textContent = '请求失败: ' + error;
+                document.getElementById('result-container').classList.add('active');
             });
         }
         
-        // 初始设置
-        window.onload = toggleFormat;
     </script>
 </body>
 </html>
