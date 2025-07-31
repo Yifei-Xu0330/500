@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地球坐标距离计算器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>地球坐标距离计算器</h1>
+        <p class="subtitle">计算地球上两点之间的距离（考虑高度）</p>
+        
+        <form method="POST">
+            <div class="input-format">
+                <label>输入格式：</label>
+                <label>
+                    <input type="radio" name="input_format" value="dms" 
+                           {% if input_format == 'dms' %}checked{% endif %} 
+                           onchange="toggleInputFormat()"> 度分秒
+                </label>
+                <label>
+                    <input type="radio" name="input_format" value="radians" 
+                           {% if input_format == 'radians' %}checked{% endif %} 
+                           onchange="toggleInputFormat()"> 弧度
+                </label>
+            </div>
+            
+            <div class="form-section">
+                <h2>点1坐标</h2>
+                
+                <div id="dms-input" class="input-group" 
+                     style="display: {% if input_format == 'dms' %}block{% else %}none{% endif %};">
+                    <div class="input-row">
+                        <label>纬度：</label>
+                        <input type="number" name="lat1_deg" placeholder="度" 
+                               value="{{ point1[0]|int if point1 else '' }}" step="1" min="0" max="90" required>
+                        <input type="number" name="lat1_min" placeholder="分" 
+                               value="{% if point1 %}{{ (point1[0] - point1[0]|int) * 60|int }}{% endif %}" step="1" min="0" max="59" required>
+                        <input type="number" name="lat1_sec" placeholder="秒" 
+                               value="{% if point1 %}{{ ((point1[0] - point1[0]|int) * 60 % 1) * 60|round(2) }}{% endif %}" step="0.01" min="0" max="59.99" required>
+                        <select name="lat1_dir" required>
+                            <option value="N" {% if point1 and point1[0] >= 0 %}selected{% endif %}>北纬</option>
+                            <option value="S" {% if point1 and point1[0] < 0 %}selected{% endif %}>南纬</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-row">
+                        <label>经度：</label>
+                        <input type="number" name="lon1_deg" placeholder="度" 
+                               value="{{ point1[1]|int if point1 else '' }}" step="1" min="0" max="180" required>
+                        <input type="number" name="lon1_min" placeholder="分" 
+                               value="{% if point1 %}{{ (point1[1] - point1[1]|int) * 60|int }}{% endif %}" step="1" min="0" max="59" required>
+                        <input type="number" name="lon1_sec" placeholder="秒" 
+                               value="{% if point1 %}{{ ((point1[1] - point1[1]|int) * 60 % 1) * 60|round(2) }}{% endif %}" step="0.01" min="0" max="59.99" required>
+                        <select name="lon1_dir" required>
+                            <option value="E" {% if point1 and point1[1] >= 0 %}selected{% endif %}>东经</option>
+                            <option value="W" {% if point1 and point1[1] < 0 %}selected{% endif %}>西经</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="radians-input" class="input-group" 
+                     style="display: {% if input_format == 'radians' %}block{% else %}none{% endif %};">
+                    <div class="input-row">
+                        <label>纬度（弧度）：</label>
+                        <input type="number" name="lat1_rad" step="0.0001" 
+                               value="{% if point1 %}{{ math.radians(point1[0])|round(6) }}{% endif %}" required>
+                    </div>
+                    
+                    <div class="input-row">
+                        <label>经度（弧度）：</label>
+                        <input type="number" name="lon1_rad" step="0.0001" 
+                               value="{% if point1 %}{{ math.radians(point1[1])|round(6) }}{% endif %}" required>
+                    </div>
+                </div>
+                
+                <div class="input-row">
+                    <label>高度（米）：</label>
+                    <input type="number" name="alt1" step="0.1" min="0" 
+                           value="{{ point1[2] if point1 else '0' }}" required>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h2>点2坐标</h2>
+                
+                <div id="dms-input2" class="input-group" 
+                     style="display: {% if input_format == 'dms' %}block{% else %}none{% endif %};">
+                    <div class="input-row">
+                        <label>纬度：</label>
+                        <input type="number" name="lat2_deg" placeholder="度" 
+                               value="{{ point2[0]|int if point2 else '' }}" step="1" min="0" max="90" required>
+                        <input type="number" name="lat2_min" placeholder="分" 
+                               value="{% if point2 %}{{ (point2[0] - point2[0]|int) * 60|int }}{% endif %}" step="1" min="0" max="59" required>
+                        <input type="number" name="lat2_sec" placeholder="秒" 
+                               value="{% if point2 %}{{ ((point2[0] - point2[0]|int) * 60 % 1) * 60|round(2) }}{% endif %}" step="0.01" min="0" max="59.99" required>
+                        <select name="lat2_dir" required>
+                            <option value="N" {% if point2 and point2[0] >= 0 %}selected{% endif %}>北纬</option>
+                            <option value="S" {% if point2 and point2[0] < 0 %}selected{% endif %}>南纬</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-row">
+                        <label>经度：</label>
+                        <input type="number" name="lon2_deg" placeholder="度" 
+                               value="{{ point2[1]|int if point2 else '' }}" step="1" min="0" max="180" required>
+                        <input type="number" name="lon2_min" placeholder="分" 
+                               value="{% if point2 %}{{ (point2[1] - point2[1]|int) * 60|int }}{% endif %}" step="1" min="0" max="59" required>
+                        <input type="number" name="lon2_sec" placeholder="秒" 
+                               value="{% if point2 %}{{ ((point2[1] - point2[1]|int) * 60 % 1) * 60|round(2) }}{% endif %}" step="0.01" min="0" max="59.99" required>
+                        <select name="lon2_dir" required>
+                            <option value="E" {% if point2 and point2[1] >= 0 %}selected{% endif %}>东经</option>
+                            <option value="W" {% if point2 and point2[1] < 0 %}selected{% endif %}>西经</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="radians-input2" class="input-group" 
+                     style="display: {% if input_format == 'radians' %}block{% else %}none{% endif %};">
+                    <div class="input-row">
+                        <label>纬度（弧度）：</label>
+                        <input type="number" name="lat2_rad" step="0.0001" 
+                               value="{% if point2 %}{{ math.radians(point2[0])|round(6) }}{% endif %}" required>
+                    </div>
+                    
+                    <div class="input-row">
+                        <label>经度（弧度）：</label>
+                        <input type="number" name="lon2_rad" step="0.0001" 
+                               value="{% if point2 %}{{ math.radians(point2[1])|round(6) }}{% endif %}" required>
+                    </div>
+                </div>
+                
+                <div class="input-row">
+                    <label>高度（米）：</label>
+                    <input type="number" name="alt2" step="0.1" min="0" 
+                           value="{{ point2[2] if point2 else '0' }}" required>
+                </div>
+            </div>
+            
+            <button type="submit">计算距离</button>
+        </form>
+        
+        {% if surface_dist is defined %}
+        <div class="results">
+            <h2>计算结果</h2>
+            
+            <div class="result-box">
+                <h3>坐标信息</h3>
+                <div class="coordinates">
+                    <div>
+                        <h4>点1：</h4>
+                        <p><strong>度分秒格式：</strong>
+                            {{ lat1_dms[0] }}°{{ lat1_dms[1] }}'{{ "%.2f"|format(lat1_dms[2]) }}"{{ lat1_dms[3] }}, 
+                            {{ lon1_dms[0] }}°{{ lon1_dms[1] }}'{{ "%.2f"|format(lon1_dms[2]) }}"{{ lon1_dms[3] }}
+                        </p>
+                        <p><strong>十进制度：</strong>
+                            纬度: {{ "%.6f"|format(point1[0]) }}, 
+                            经度: {{ "%.6f"|format(point1[1]) }}, 
+                            高度: {{ "%.1f"|format(point1[2]) }}米
+                        </p>
+                    </div>
+                    <div>
+                        <h4>点2：</h4>
+                        <p><strong>度分秒格式：</strong>
+                            {{ lat2_dms[0] }}°{{ lat2_dms[1] }}'{{ "%.2f"|format(lat2_dms[2]) }}"{{ lat2_dms[3] }}, 
+                            {{ lon2_dms[0] }}°{{ lon2_dms[1] }}'{{ "%.2f"|format(lon2_dms[2]) }}"{{ lon2_dms[3] }}
+                        </p>
+                        <p><strong>十进制度：</strong>
+                            纬度: {{ "%.6f"|format(point2[0]) }}, 
+                            经度: {{ "%.6f"|format(point2[1]) }}, 
+                            高度: {{ "%.1f"|format(point2[2]) }}米
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="result-box">
+                <h3>距离计算结果</h3>
+                <p><strong>地球表面距离：</strong> {{ "%.2f"|format(surface_dist) }} 米 ({{ "%.2f"|format(surface_dist/1000) }} 公里)</p>
+                <p><strong>空间直线距离（考虑高度）：</strong> {{ "%.2f"|format(straight_dist) }} 米 ({{ "%.2f"|format(straight_dist/1000) }} 公里)</p>
+            </div>
+            
+            <div class="visualization">
+                <h3>两点位置可视化</h3>
+                <img src="data:image/png;base64,{{ plot_url }}" alt="两点位置可视化">
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        function toggleInputFormat() {
+            const format = document.querySelector('input[name="input_format"]:checked').value;
+            
+            if (format === 'dms') {
+                document.getElementById('dms-input').style.display = 'block';
+                document.getElementById('dms-input2').style.display = 'block';
+                document.getElementById('radians-input').style.display = 'none';
+                document.getElementById('radians-input2').style.display = 'none';
+            } else {
+                document.getElementById('dms-input').style.display = 'none';
+                document.getElementById('dms-input2').style.display = 'none';
+                document.getElementById('radians-input').style.display = 'block';
+                document.getElementById('radians-input2').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
