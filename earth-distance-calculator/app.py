@@ -141,6 +141,8 @@ def create_plot(point1, point2):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
+        print("收到表单提交！")
+        print(request.form)
         input_format = request.form.get('input_format')
         
         if input_format == 'dms':
